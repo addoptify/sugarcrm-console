@@ -15,17 +15,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 class ImportCommand extends ApplicationCommand
 {
     /**
-     * @var array
-     */
-    private static $links = array(
-        'trigger_filters',
-        'triggers',
-        'alerts',
-        'alerts',
-        'actions',
-    );
-
-    /**
      * {@inheritdoc}
      */
     protected function configure()
@@ -119,38 +108,28 @@ class ImportCommand extends ApplicationCommand
         /** @var \WorkFlow $workflow */
         $workflow = $this->findRecord('WorkFlow', $id);
 
-        $changes = $this->populateData($workflow, $data);
-
-        $this->saveRecord($workflow, $changes);
-
-        foreach ($data as $fieldName => $value) {
-            if (in_array($fieldName, self::$links)) {
-                $this->syncLink($workflow, $fieldName, $value);
-            }
-        }
+        $this->syncRecord($workflow, $data);
     }
 
     /**
-     * @param \WorkFlow $workflow
+     * @param \SugarBean $bean
      * @param string    $link
      * @param array     $records
      */
-    private function syncLink(\WorkFlow $workflow, $link, array $records)
+    private function syncLink(\SugarBean $bean, $link, array $records)
     {
-        $workflow->load_relationship($link);
+        $bean->load_relationship($link);
 
-        $current = $workflow->$link->getBeans();
+        $current = $bean->$link->getBeans();
 
         foreach ($records as $id => $data) {
-            $record = $this->findRecord($workflow->$link->getRelatedModuleName(), $id);
+            $record = $this->findRecord($bean->$link->getRelatedModuleName(), $id);
 
             if (isset($current[$id])) {
                 unset($current[$id]);
             }
 
-            $changes = $this->populateData($record, $data);
-
-            $this->saveRecord($record, $changes);
+            $this->syncRecord($record, $data);
         }
 
         $this->deleteRecords($current);
@@ -166,16 +145,26 @@ class ImportCommand extends ApplicationCommand
         $changes = false;
 
         foreach ($data as $fieldName => $value) {
-            if (!in_array($fieldName, self::$links)) {
-                if ($bean->$fieldName != $value) {
+            if ($bean->field_defs[$fieldName]['type'] === 'link') {
+                continue;
+            }
 
-                    if ($this->input->getOption('verbose')) {
-                        $this->output->writeln("<comment>   * updating field $fieldName to '$value' on record with id {$bean->id} in module {$bean->module_dir}, previous value: '{$bean->$fieldName}'</comment>");
-                    }
+            if ($bean->$fieldName != $value) {
 
-                    $bean->$fieldName = $value;
-                    $changes = true;
+                if ($this->input->getOption('verbose')) {
+                    $message = sprintf(
+                        '<comment>   * updating field %s to \'%s\' on record with id %s in module %s, previous value: \'%s\'</comment>',
+                        $fieldName,
+                        $value,
+                        $bean->id,
+                        $bean->module_dir,
+                        $bean->$fieldName
+                    );
+                    $this->output->writeln($message);
                 }
+
+                $bean->$fieldName = $value;
+                $changes = true;
             }
         }
 
@@ -255,5 +244,22 @@ class ImportCommand extends ApplicationCommand
         }
 
         return $data;
+    }
+
+    /**
+     * @param \SugarBean $bean
+     * @param array      $data
+     */
+    private function syncRecord(\SugarBean $bean, array $data)
+    {
+        $changes = $this->populateData($bean, $data);
+
+        $this->saveRecord($bean, $changes);
+
+        foreach ($data as $fieldName => $value) {
+            if ($bean->field_defs[$fieldName]['type'] === 'link') {
+                $this->syncLink($bean, $fieldName, $value);
+            }
+        }
     }
 }

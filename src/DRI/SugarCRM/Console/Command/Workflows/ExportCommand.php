@@ -17,17 +17,6 @@ class ExportCommand extends ApplicationCommand
     /**
      * @var array
      */
-    private static $links = array(
-        'trigger_filters',
-        'triggers',
-        'alerts',
-        'alerts',
-        'actions',
-    );
-
-    /**
-     * @var array
-     */
     private static $fieldBlacklist = array (
         'id',
         'deleted',
@@ -131,22 +120,30 @@ class ExportCommand extends ApplicationCommand
             throw new \Exception('Unable to retrieve workflow with id: '.$id);
         }
 
-        $data = $workflow->toArray();
+        $data = $this->exportBean($workflow);
+
+        $this->write($id, $data);
+    }
+
+    /**
+     * @param \SugarBean $bean
+     * @return array
+     */
+    private function exportBean(\SugarBean $bean)
+    {
+        $data = $bean->toArray();
 
         // remove fields in blacklist
         $data = array_diff_key($data, array_flip(self::$fieldBlacklist));
 
-        foreach (self::$links as $link) {
-            $workflow->load_relationship($link);
-            $data[$link] = array_map(function (\SugarBean $bean) {
-                $data = $bean->toArray();
-                // remove fields in blacklist
-                $data = array_diff_key($data, array_flip(self::$fieldBlacklist));
-                return $data;
-            }, $workflow->$link->getBeans());
+        foreach ($data as $link => $value) {
+            if ($bean->field_defs[$link]['type'] === 'link') {
+                $bean->load_relationship($link);
+                $data[$link] = array_map(array ($this, 'exportBean'), $bean->$link->getBeans());
+            }
         }
 
-        $this->write($id, $data);
+        return $data;
     }
 
     /**
