@@ -44,7 +44,6 @@ class ExportCommand extends ApplicationCommand
     {
         $this->setName('workflows:export');
         $this->addArgument('id', InputArgument::OPTIONAL, 'if you only want to export a single workflow');
-        $this->addOption('all', 'A', InputOption::VALUE_NONE, 'export all workflows available in the target directory');
         $this->addOption('directory', 'D', InputOption::VALUE_REQUIRED, 'target directive relative from the docroot', '../config/workflows');
         $this->addOption('purge', 'P', InputOption::VALUE_NONE, 'purges all workflow files that does not exist in the database');
         $this->addOption('dry', null, InputOption::VALUE_NONE, 'run the script in dry mode (no changes will be made)');
