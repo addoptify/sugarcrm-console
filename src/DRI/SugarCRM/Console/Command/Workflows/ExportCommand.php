@@ -46,6 +46,7 @@ class ExportCommand extends ApplicationCommand
         $this->addArgument('id', InputArgument::OPTIONAL, 'if you only want to export a single workflow');
         $this->addOption('all', 'A', InputOption::VALUE_NONE, 'export all workflows available in the target directory');
         $this->addOption('directory', 'D', InputOption::VALUE_REQUIRED, 'target directive relative from the docroot', '../config/workflows');
+        $this->addOption('purge', 'P', InputOption::VALUE_NONE, 'purges all workflow files that does not exist in the database');
         $this->setDescription('Export workflow records into .json files');
     }
 
@@ -61,7 +62,17 @@ class ExportCommand extends ApplicationCommand
         if (null !== $this->input->getArgument('id')) {
             $this->export($this->input->getArgument('id'));
         } else {
-            array_map(array ($this, 'export'), $this->listIds());
+            $ids = $this->listIds();
+
+            if (count($ids) > 0) {
+                array_map(array ($this, 'export'), $ids);
+            } else {
+                $output->writeln('<info>no workflows to export</info>');
+            }
+
+            if ($input->getOption('purge')) {
+                $this->purge($ids);
+            }
         }
     }
 
@@ -78,6 +89,31 @@ class ExportCommand extends ApplicationCommand
         return array_map(function (array $row) {
             return $row['id'];
         }, $query->execute());
+    }
+
+    /**
+     * @return array
+     * @throws \SugarQueryException
+     */
+    public function listFileIds()
+    {
+        $files =  glob(sprintf('%s/*.json', $this->input->getOption('directory')));
+
+        return array_map(function ($file) {
+            return basename($file, '.json');
+        }, $files);
+    }
+
+    /**
+     * @param array $ids
+     */
+    private function purge(array $ids)
+    {
+        foreach (array_diff($this->listFileIds(), $ids) as $id) {
+            $file =  sprintf('%s/%s.json', $this->input->getOption('directory'), $id);
+            $this->output->writeln("<comment>deleting file {$file}</comment>");
+            unlink($file);
+        }
     }
 
     /**

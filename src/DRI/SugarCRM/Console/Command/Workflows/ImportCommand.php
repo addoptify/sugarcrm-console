@@ -33,6 +33,7 @@ class ImportCommand extends ApplicationCommand
         $this->setName('workflows:import');
         $this->addArgument('id', InputArgument::OPTIONAL, 'if you only want to import a single workflow');
         $this->addOption('directory', 'D', InputOption::VALUE_REQUIRED, 'target directive relative from the docroot', '../config/workflows');
+        $this->addOption('purge', 'P', InputOption::VALUE_NONE, 'purges all workflows that does not exist in files');
         $this->setDescription('Export workflow records from .json files');
     }
 
@@ -48,7 +49,37 @@ class ImportCommand extends ApplicationCommand
         if (null !== $this->input->getArgument('id')) {
             $this->import($this->input->getArgument('id'));
         } else {
-            array_map(array ($this, 'import'), $this->listIds());
+            $ids = $this->listIds();
+
+            if (count($ids) > 0) {
+                array_map(array ($this, 'import'), $ids);
+            } else {
+                $output->writeln('<info>no workflows to import</info>');
+            }
+
+            if ($input->getOption('purge')) {
+                $this->purge($ids);
+            }
+        }
+    }
+
+    /**
+     * @param array $ids
+     */
+    private function purge(array $ids)
+    {
+        $query = new \SugarQuery();
+        $query->from(new \WorkFlow());
+        $query->select('id');
+        $query->where()->notIn('id', $ids);
+
+        foreach ($query->execute() as $row) {
+            $workflow = \BeanFactory::retrieveBean('WorkFlow', $row['id']);
+
+            if ($workflow) {
+                $this->output->writeln("<comment>- Deleting {$workflow->module_dir} with id {$workflow->id}</comment>");
+                $workflow->mark_deleted($workflow->id);
+            }
         }
     }
 
@@ -133,6 +164,11 @@ class ImportCommand extends ApplicationCommand
         foreach ($data as $fieldName => $value) {
             if (!in_array($fieldName, self::$links)) {
                 if ($bean->$fieldName != $value) {
+
+                    if ($this->input->getOption('verbose')) {
+                        $this->output->writeln("<comment>   * updating field $fieldName to $value on record with id {$bean->id} in module {$bean->module_dir}</comment>");
+                    }
+
                     $bean->$fieldName = $value;
                     $changes = true;
                 }
