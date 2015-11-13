@@ -47,6 +47,7 @@ class ExportCommand extends ApplicationCommand
         $this->addOption('all', 'A', InputOption::VALUE_NONE, 'export all workflows available in the target directory');
         $this->addOption('directory', 'D', InputOption::VALUE_REQUIRED, 'target directive relative from the docroot', '../config/workflows');
         $this->addOption('purge', 'P', InputOption::VALUE_NONE, 'purges all workflow files that does not exist in the database');
+        $this->addOption('dry', null, InputOption::VALUE_NONE, 'run the script in dry mode (no changes will be made)');
         $this->setDescription('Export workflow records into .json files');
     }
 
@@ -112,7 +113,10 @@ class ExportCommand extends ApplicationCommand
         foreach (array_diff($this->listFileIds(), $ids) as $id) {
             $file =  sprintf('%s/%s.json', $this->input->getOption('directory'), $id);
             $this->output->writeln("<comment>deleting file {$file}</comment>");
-            unlink($file);
+
+            if (!$this->input->getOption('dry')) {
+                unlink($file);
+            }
         }
     }
 
@@ -162,14 +166,20 @@ class ExportCommand extends ApplicationCommand
 
         if (file_exists($file)) {
             if (file_get_contents($file) !== $content) {
-                file_put_contents($file, $content);
                 $this->output->writeln("<comment>updating workflow file: $file</comment>");
+
+                if (!$this->input->getOption('dry')) {
+                    file_put_contents($file, $content);
+                }
             } else {
                 $this->output->writeln("<info>workflow in file $file is already exported</info>");
             }
         } else {
-            file_put_contents($file, $content);
             $this->output->writeln("<comment>creating workflow file: $file</comment>");
+
+            if (!$this->input->getOption('dry')) {
+                file_put_contents($file, $content);
+            }
         }
     }
 }

@@ -34,6 +34,7 @@ class ImportCommand extends ApplicationCommand
         $this->addArgument('id', InputArgument::OPTIONAL, 'if you only want to import a single workflow');
         $this->addOption('directory', 'D', InputOption::VALUE_REQUIRED, 'target directive relative from the docroot', '../config/workflows');
         $this->addOption('purge', 'P', InputOption::VALUE_NONE, 'purges all workflows that does not exist in files');
+        $this->addOption('dry', null, InputOption::VALUE_NONE, 'run the script in dry mode (no changes will be made)');
         $this->setDescription('Export workflow records from .json files');
     }
 
@@ -78,7 +79,10 @@ class ImportCommand extends ApplicationCommand
 
             if ($workflow) {
                 $this->output->writeln("<comment>- Deleting {$workflow->module_dir} with id {$workflow->id}</comment>");
-                $workflow->mark_deleted($workflow->id);
+
+                if (!$this->input->getOption('dry')) {
+                    $workflow->mark_deleted($workflow->id);
+                }
             }
         }
     }
@@ -166,7 +170,7 @@ class ImportCommand extends ApplicationCommand
                 if ($bean->$fieldName != $value) {
 
                     if ($this->input->getOption('verbose')) {
-                        $this->output->writeln("<comment>   * updating field $fieldName to $value on record with id {$bean->id} in module {$bean->module_dir}</comment>");
+                        $this->output->writeln("<comment>   * updating field $fieldName to '$value' on record with id {$bean->id} in module {$bean->module_dir}, previous value: '{$bean->$fieldName}'</comment>");
                     }
 
                     $bean->$fieldName = $value;
@@ -186,10 +190,16 @@ class ImportCommand extends ApplicationCommand
     {
         if ($bean->new_with_id) {
             $this->output->writeln("<comment>   * creating {$bean->module_dir} with id {$bean->id}</comment>");
-            $bean->save();
+
+            if (!$this->input->getOption('dry')) {
+                $bean->save();
+            }
         } elseif ($changes) {
             $this->output->writeln("<comment>   * updating {$bean->module_dir} with id {$bean->id}</comment>");
-            $bean->save();
+
+            if (!$this->input->getOption('dry')) {
+                $bean->save();
+            }
         } else {
             $this->output->writeln("<info>   * {$bean->module_dir} with id {$bean->id} is already synchronized</info>");
         }
@@ -222,7 +232,10 @@ class ImportCommand extends ApplicationCommand
     {
         foreach ($records as $record) {
             $this->output->writeln("<comment>   * deleting {$record->module_dir} with id {$record->id}</comment>");
-            $record->mark_deleted($record->id);
+
+            if (!$this->input->getOption('dry')) {
+                $record->mark_deleted($record->id);
+            }
         }
     }
 
