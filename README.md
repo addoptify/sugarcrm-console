@@ -23,7 +23,7 @@ Installation
 
 #### Checkout
 ```sh
-git clone git@gitlab.dri-nordic.com:dri-nordic/sugarcrm-console.git /usr/local/share/sugarcrm-console
+git clone git@github.com:addoptify/sugarcrm-console.git /usr/local/share/sugarcrm-console
 cd /usr/local/share/sugarcrm-console
 ```
 
@@ -43,27 +43,6 @@ ln -s /usr/local/share/sugarcrm-console/bin/sugarcrm /usr/local/bin/sugarcrm
 ```
 
 ### Install inside project
-
-#### In project managed by composer
-
-```sh
-    .....
-    "repositories": [
-        ....
-        {
-            "type": "composer",
-            "url":  "https://packages.dricrm.com/"
-        }
-        .....
-    ],
-    ......
-    "require": {
-        .....
-        "dri-nordic/sugarcrm-console": "dev-master",
-        .....
-    }
-    ....
-```
 
 ##### Install dependencies
 
