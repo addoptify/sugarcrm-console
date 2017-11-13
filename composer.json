@@ -1,12 +1,12 @@
 {
-    "name": "dri-nordic/sugarcrm-console",
+    "name": "addoptify/sugarcrm-console",
     "license": "MIT",
     "description": "",
-    "homepage": "http://gitlab.scm.dri.pt/dri-nordic/sugarcrm-console",
+    "homepage": "https://github.com/addoptify/sugarcrm-console",
     "authors": [
         {
             "name": "Emil Kilhage",
-            "email": "emil.kilhage@dri-nordic.com"
+            "email": "emilkilhage@gmail.com"
         }
     ],
     "require": {
